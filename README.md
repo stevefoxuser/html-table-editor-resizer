@@ -1,3 +1,7 @@
+> Demo  
+
+<img src="src/demo.gif">
+
 > Quick start  
 
 ### npm install  
