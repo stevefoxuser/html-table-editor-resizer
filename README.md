@@ -1,8 +1,8 @@
 > Quick start  
 
-# npm install  
+### npm install  
 
-# npm run dev  
+### npm run dev  
 
 
 > 初始化 Initialize  
