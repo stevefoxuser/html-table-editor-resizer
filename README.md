@@ -1,7 +1,9 @@
-> Quick start
+> Quick start  
+
 #npm install
 #npm run dev
-> 初始化 Initialize
+
+> 初始化 Initialize  
 ### 三种方式 初始化表格
 ### Three ways to initialize your table
 ```javascript
