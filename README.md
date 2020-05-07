@@ -14,7 +14,7 @@ import TableEditor from "./tableEditor"
 // 最好把body换成某个空的div容器，这个div不要放其他元素
 const t = new TableEditor()
 
-t.Create(rows, columns, document.body)
+t.Create(10, 10, document.body)
 
 // or
 t.CreateFromString('<table><tr><td></td><td></td></tr><tr><td></td><td></td></tr></table>',document.body)
