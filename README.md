@@ -1,7 +1,9 @@
 > Quick start  
 
-#npm install
-#npm run dev
+# npm install  
+
+# npm run dev  
+
 
 > 初始化 Initialize  
 ### 三种方式 初始化表格
