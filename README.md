@@ -4,6 +4,7 @@
 
 ### npm run dev  
 
+### 查看 localhost:8080
 
 > 初始化 Initialize  
 ### 三种方式 初始化表格
