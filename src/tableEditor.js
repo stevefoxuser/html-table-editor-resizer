@@ -89,6 +89,7 @@ class TableEditor {
     // 表格默认的样式，所有实例只创建一个样式标签
     if (!$('#table_editor_global')) {
       const style = d.createElement('style')
+      style.setAttribute('id', 'table_editor_global')
       style.setAttribute('type', 'text/css')
       style.innerHTML = `
         #new_context_menu{
@@ -126,6 +127,9 @@ class TableEditor {
         .namespace_table_editor{
           border-collapse:collapse ;
           word-break:break-all;
+        }
+        .namespace_table_editor td{
+          vertical-align:top;
         }
         .namespace_table_editor .selected{
           background:#ccc;
@@ -176,7 +180,6 @@ class TableEditor {
         fontSize: '字体大小',
         height: '高度',
         width: '宽度',
-        writingMode: '文本方向',
         paddingTop: '上边距',
         paddingRight: '右边距',
         paddingBottom: '下边距',
@@ -188,7 +191,6 @@ class TableEditor {
         fontSize: 'font size',
         height: 'height',
         width: 'width',
-        writingMode: 'writing mode',
         paddingTop: 'padding top',
         paddingRight: 'padding right',
         paddingBottom: 'padding bottom',
@@ -208,24 +210,26 @@ class TableEditor {
     }
     // const id = this.newId()
     let result = `<table border="1" class="namespace_table_editor">${tableStr.join('')}</table>`
-    appendTo.innerHTML = result
-    this.pNode = appendTo
-    this.initTable()
+    if (appendTo) {
+      appendTo.innerHTML = result
+      this.initTable($('table', appendTo)[0])
+    }
+    return result
   }
   CreateFromString (str, appendTo) {
     appendTo.innerHTML = str
-    this.pNode = appendTo
-    this.initTable()
+    this.initTable($('table', appendTo)[0])
   }
   CreateFromElem (elem) {
     this.pNode = elem.parentNode
     this.initTable(elem)
   }
   initTable (elem) {
-    this.el = elem || $('table', this.pNode)[0]
+    this.el = elem
     // if (!this.el.id) {
     //   this.el.setAttribute('id', this.newId())
     // }
+    addClass(this.el, 'namespace_table_editor')
     this.el.ondragstart = function () {
       return false
     }
@@ -737,11 +741,6 @@ class TableEditor {
           <option ${last.style[key] === 'middle' ? 'selected' : ''} value="middle">居中</option>
           <option ${last.style[key] === 'bottom' ? 'selected' : ''} value="bottom">底部对齐</option>
         </select>`
-      } else if (key === 'writingMode') {
-        html += `<select id="namespace_${key}">
-          <option ${last.style[key] === 'lr' ? 'selected' : ''} value="lr">从左向右</option>
-          <option ${last.style[key] === 'vertical-lr' ? 'selected' : ''} value="vertical-lr">从上往下</option>
-        </select>`
       } else {
         html += `<input id="namespace_${key}" type="number" value="${last.style[key].replace('px', '')}"> px</div>`
       }
@@ -772,12 +771,5 @@ class TableEditor {
     })
   }
 }
-
-/*
-to do
-  html编辑模式
-  contenteditable
-  datasource
-*/
 
 export default TableEditor
