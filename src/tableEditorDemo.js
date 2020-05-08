@@ -11,7 +11,7 @@ function init () {
   })
 
   $('#btn2').addEventListener('click', function () {
-    alert(t.toString())
+    alert(t.GetTableStr())
   })
 
   $('#btn').click()

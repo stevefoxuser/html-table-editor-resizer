@@ -125,6 +125,7 @@ class TableEditor {
         }
         .namespace_table_editor{
           border-collapse:collapse ;
+          word-break:break-all;
         }
         .namespace_table_editor .selected{
           background:#ccc;
@@ -147,17 +148,6 @@ class TableEditor {
       `
       d.body.appendChild(style)
     }
-    // .namespace_save_style{
-    //   background:#fff;
-    //   border:1px solid #ccc;
-    //   border-radius:5px;
-    //   padding:5px;
-    //   min-width:60px;
-    //   cursor:pointer;
-    //   display:block;
-    //   margin:0 auto;
-    // }
-    // set text template
     this.menuList = {
       cn: {
         insertRowAfter: '在下方插入行',
@@ -184,15 +174,21 @@ class TableEditor {
         verticalAlign: '垂直对齐',
         textAlign: '水平对齐',
         fontSize: '字体大小',
+        height: '高度',
+        width: '宽度',
+        writingMode: '文本方向',
         paddingTop: '上边距',
         paddingRight: '右边距',
         paddingBottom: '下边距',
         paddingLeft: '左边距',
       },
       en: {
-        fontSize: 'font size',
         verticalAlign: 'vertical align',
         textAlign: 'text align',
+        fontSize: 'font size',
+        height: 'height',
+        width: 'width',
+        writingMode: 'writing mode',
         paddingTop: 'padding top',
         paddingRight: 'padding right',
         paddingBottom: 'padding bottom',
@@ -210,8 +206,8 @@ class TableEditor {
       _tmp += '</tr>'
       tableStr.push(_tmp)
     }
-    const id = this.newId()
-    let result = `<table border="1" id="${id}" class="namespace_table_editor">${tableStr.join('')}</table>`
+    // const id = this.newId()
+    let result = `<table border="1" class="namespace_table_editor">${tableStr.join('')}</table>`
     appendTo.innerHTML = result
     this.pNode = appendTo
     this.initTable()
@@ -227,25 +223,30 @@ class TableEditor {
   }
   initTable (elem) {
     this.el = elem || $('table', this.pNode)[0]
-    if (!this.el.id) {
-      this.el.setAttribute('id', this.newId())
-    }
-    this.el.setAttribute('contenteditable', true)
+    // if (!this.el.id) {
+    //   this.el.setAttribute('id', this.newId())
+    // }
     this.el.ondragstart = function () {
       return false
     }
+    this.el.setAttribute('contenteditable', true)
     this.bindEvents()
     // this.setTableMap()
   }
   GetTableStr () {
-    let str = this.el.parentNode.innerHTML
-    str = str.replace('contenteditable="true"', '')
+    this.el.setAttribute('contenteditable', false)
+    setTimeout(() => {
+      this.el.setAttribute('contenteditable', true)
+    })
     return this.el.parentNode.innerHTML
   }
   GetTable () {
     const elem = this.el.clone(true)
     elem.setAttribute('contenteditable', false)
     return elem
+  }
+  bindData (name, data) {
+
   }
   cellFilter (x, y) {
     const result = []
@@ -272,9 +273,6 @@ class TableEditor {
   }
   newId () {
     return `table_editor_${$('.namespace_table_editor').length}`
-  }
-  toString () {
-    return this.pNode.innerHTML
   }
   bindEvents () {
     this.el.addEventListener('mousedown', (e) => {
@@ -357,10 +355,10 @@ class TableEditor {
     }
   }
   moveEvent (e) {
-    if (isParent(e.target, this.el)) {
-      e.preventDefault()
-    }
     if (this.ms === 'down') {
+      if (isParent(e.target, this.el)) {
+        e.preventDefault()
+      }
       if (this.action === 'col-resize') {
         this.colResize(e)
       } else if (this.action === 'row-resize') {
@@ -374,6 +372,11 @@ class TableEditor {
     }
     const td = e.target
     this.setAction()
+    if (isParent(e.target, this.el)) {
+      e.preventDefault()
+    } else {
+      return
+    }
     if (e.offsetX >= td.offsetWidth - conf.cursorWidth) {
       /**  colspan大于1的时候从右侧border拖动改变宽度时显示有点bug，要避免这个问题计算繁琐，直接避过。
        * 可以把parseInt(td.getAttribute('colspan')) <= 1这个限制条件去掉，在colspan大于1的单元格，从内侧拖动一下试试 **/
@@ -464,6 +467,8 @@ class TableEditor {
     e.preventDefault()
     let banMenu = []
     if (triggerBy === 'select') {
+      const tds = $('.selected', this.el)
+      if (!tds.length) return
       banMenu = ['insertColumnAfter', 'deleteRow', 'deleteColumn', 'insertRowAfter', 'splitCell']
     } else {
       banMenu = ['mergeCells', 'splitCell']
@@ -722,15 +727,20 @@ class TableEditor {
       <div class="namespace_right_div">`
       if (key === 'textAlign') {
         html += `<select id="namespace_${key}">
-          <option ${last.style[key] === 'left' ? 'selected' : ''}>left</option>
-          <option ${last.style[key] === 'center' ? 'selected' : ''}>center</option>
-          <option ${last.style[key] === 'right' ? 'selected' : ''}>right</option>
+          <option ${last.style[key] === 'left' ? 'selected' : ''} value="left">左对齐</option>
+          <option ${last.style[key] === 'center' ? 'selected' : ''} value="center">居中</option>
+          <option ${last.style[key] === 'right' ? 'selected' : ''} value="right">右对齐</option>
         </select>`
       } else if (key === 'verticalAlign') {
         html += `<select id="namespace_${key}">
-          <option ${last.style[key] === 'top' ? 'selected' : ''}>top</option>
-          <option ${last.style[key] === 'middle' ? 'selected' : ''}>middle</option>
-          <option ${last.style[key] === 'bottom' ? 'selected' : ''}>bottom</option>
+          <option ${last.style[key] === 'top' ? 'selected' : ''} value="top">顶部对齐</option>
+          <option ${last.style[key] === 'middle' ? 'selected' : ''} value="middle">居中</option>
+          <option ${last.style[key] === 'bottom' ? 'selected' : ''} value="bottom">底部对齐</option>
+        </select>`
+      } else if (key === 'writingMode') {
+        html += `<select id="namespace_${key}">
+          <option ${last.style[key] === 'lr' ? 'selected' : ''} value="lr">从左向右</option>
+          <option ${last.style[key] === 'vertical-lr' ? 'selected' : ''} value="vertical-lr">从上往下</option>
         </select>`
       } else {
         html += `<input id="namespace_${key}" type="number" value="${last.style[key].replace('px', '')}"> px</div>`
