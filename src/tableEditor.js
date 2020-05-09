@@ -81,7 +81,10 @@ class TableEditor {
     this.selectDirection = null
     this.menuState = 'hidden'
     this.ms = 'up'
-    this.tableMap = []
+    this.startY = null
+    this.startHeight = null
+    this.startX = null
+    this.startWidth = null
 
     // 拖动光标生效范围必须比td最小宽度要小，否则会产生很多额外的逻辑判断当前拖动的是哪一个td，没有实用价值
     if (conf.cursorWidth >= conf.minWidth) conf.minWidth = conf.cursorWidth + 1
@@ -94,6 +97,7 @@ class TableEditor {
       style.innerHTML = `
         #new_context_menu{
           position:absolute;
+          z-index:999999999;
         }
         #new_context_menu ul{
           list-style-type:none;
@@ -130,6 +134,10 @@ class TableEditor {
         }
         .namespace_table_editor td{
           vertical-align:top;
+          padding-top:5px;
+          padding-right:5px;
+          padding-bottom:5px;
+          padding-left:5px;
         }
         .namespace_table_editor .selected{
           background:#ccc;
@@ -226,26 +234,31 @@ class TableEditor {
   }
   initTable (elem) {
     this.el = elem
-    // if (!this.el.id) {
-    //   this.el.setAttribute('id', this.newId())
-    // }
     addClass(this.el, 'namespace_table_editor')
     this.el.ondragstart = function () {
       return false
     }
     this.el.setAttribute('contenteditable', true)
     this.bindEvents()
-    // this.setTableMap()
   }
-  GetTableStr () {
-    this.el.setAttribute('contenteditable', false)
+  GetTableStr (directly) {
+    // if (directly) {
+    //   return this.el.parentNode.innerHTML
+    // } else {
+    const elem = this.el.cloneNode(true)
+    elem.style.cursor = 'default'
+    elem.setAttribute('contenteditable', false)
+    let div = d.createElement('div')
+    div.appendChild(elem)
     setTimeout(() => {
-      this.el.setAttribute('contenteditable', true)
+      div = null
     })
-    return this.el.parentNode.innerHTML
+    return div.innerHTML
+    // }
   }
   GetTable () {
-    const elem = this.el.clone(true)
+    const elem = this.el.cloneNode(true)
+    elem.style.cursor = 'default'
     elem.setAttribute('contenteditable', false)
     return elem
   }
@@ -316,6 +329,8 @@ class TableEditor {
         })
         this.actd = tds[tds.length - 1]
       }
+      this.startX = e.pageX
+      this.startWidth = this.actd.offsetWidth
     } else if (this.action === 'row-resize') {
       if (e.offsetY >= td.offsetHeight - conf.cursorWidth) {
         this.actd = td
@@ -326,6 +341,8 @@ class TableEditor {
         })
         this.actd = tds[tds.length - 1]
       }
+      this.startY = e.pageY
+      this.startHeight = this.actd.offsetHeight
     }
     else {
       console.log('No action triggered.')
@@ -335,7 +352,7 @@ class TableEditor {
     e.preventDefault()
     this.ms = 'up'
     this.actd = null
-    d.body.style.cursor = 'default'
+    this.el.style.cursor = 'default'
     // 选中td
     if (this.selectDirection && this.menuState === 'hidden') {
       // this.selectDirection = null
@@ -346,15 +363,15 @@ class TableEditor {
     this.actd = null
     this.action = null
     this.ms = 'up'
-    d.body.style.cursor = 'default'
+    this.el.style.cursor = 'default'
     if (msg) alert(msg)
   }
   setAction (action) {
     if (action) {
-      d.body.style.cursor = action
+      this.el.style.cursor = action
       this.action = action
     } else {
-      d.body.style.cursor = 'default'
+      this.el.style.cursor = 'default'
       this.action = null
     }
   }
@@ -403,12 +420,13 @@ class TableEditor {
       }
     } else if (isParent(e.target, this.el)) {
       this.action = 'select'
-      d.body.style.cursor = 'default'
+      this.el.style.cursor = 'default'
     }
   }
   colResize (e) {
     if (!this.actd) return
-    const w = e.pageX - getPageX(this.actd)
+    let offset = e.pageX - this.startX
+    const w = offset + this.startWidth
     const tds = this.cellFilter(this.actd.offsetLeft, -1)
     tds.forEach(td => {
       td.style.width = (w > conf.minWidth ? w : conf.minWidth) + 'px'
@@ -416,7 +434,9 @@ class TableEditor {
   }
   rowResize (e) {
     if (!this.actd) return
-    const h = e.pageY - getPageY(this.actd)
+    // const h = e.y - getPageY(this.actd)
+    let offset = e.pageY - this.startY
+    const h = offset + this.startHeight
     const tds = this.cellFilter(-1, this.actd.offsetTop)
     tds.forEach(td => {
       td.style.height = (h > conf.minHeight ? h : conf.minHeight) + 'px'
@@ -471,7 +491,7 @@ class TableEditor {
     e.preventDefault()
     let banMenu = []
     if (triggerBy === 'select') {
-      const tds = $('.selected', this.el)
+      let tds = $('.selected', this.el)
       if (!tds.length) return
       banMenu = ['insertColumnAfter', 'deleteRow', 'deleteColumn', 'insertRowAfter', 'splitCell']
     } else {
@@ -504,12 +524,15 @@ class TableEditor {
       d.removeEventListener('mousedown', rm)
     }
     this.rm = rm
+    let tds = $('.selected', this.el)
     // if (!$('#new_context_menu')) {
     const div = d.createElement('div')
     div.id = 'new_context_menu'
     div.innerHTML = menuHtml
     div.style.left = e.x + 'px'
     div.style.top = e.y + 'px'
+    // div.style.left = getPageX(tds[0]) + tds[0].offsetWidth + 'px'
+    // div.style.top = getPageY(tds[0]) + tds[0].offsetHeight + 'px'
     div.addEventListener('contextmenu', (e) => {
       e.preventDefault()
     })
