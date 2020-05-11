@@ -45,6 +45,9 @@ const removeClass = function (el, className) {
   let newClassName = el.className.replace(className, '')
   newClassName = newClassName.replace(/^\s+/, '').replace(/\s+$/, '')
   el.className = newClassName.split(/\s+/g).join(' ')
+  if (/\s+/.test(el.className) || !el.className) {
+    el.removeAttribute('class')
+  }
 }
 const getIndex = function (el) {
   let index = null
@@ -64,7 +67,11 @@ const insertAfter = function (newNode, existingNode) {
     parent.insertBefore(newNode, existingNode.nextSibling);
   }
 }
-
+const checkIfOutOfScreen = function (popoverEl, top) {
+  if (top + popoverEl.offsetHeight > d.documentElement.clientHeight) {
+    popoverEl.style.top = d.documentElement.clientHeight - popoverEl.offsetHeight + 'px'
+  }
+}
 const getRowSpan = function (el) {
   return el.getAttribute('rowspan') ? parseInt(el.getAttribute('rowspan')) : 1
 }
@@ -85,6 +92,7 @@ class TableEditor {
     this.startHeight = null
     this.startX = null
     this.startWidth = null
+    this.readonly = false
 
     // 拖动光标生效范围必须比td最小宽度要小，否则会产生很多额外的逻辑判断当前拖动的是哪一个td，没有实用价值
     if (conf.cursorWidth >= conf.minWidth) conf.minWidth = conf.cursorWidth + 1
@@ -128,16 +136,9 @@ class TableEditor {
           cursor:default;
           background:#fff;
         }
-        .namespace_table_editor{
-          border-collapse:collapse ;
-          word-break:break-all;
-        }
         .namespace_table_editor td{
           vertical-align:top;
-          padding-top:5px;
-          padding-right:5px;
-          padding-bottom:5px;
-          padding-left:5px;
+          padding:0;
         }
         .namespace_table_editor .selected{
           background:#ccc;
@@ -149,6 +150,9 @@ class TableEditor {
         .namespace_left_div{
           width:100px;
           float:left;
+        }
+        .namespace_right_div input,.namespace_right_div select{
+          color:#333;
         }
         .namespace_right_div{
           width:80px;
@@ -186,6 +190,7 @@ class TableEditor {
         verticalAlign: '垂直对齐',
         textAlign: '水平对齐',
         fontSize: '字体大小',
+        lineHeight: '行高',
         height: '高度',
         width: '宽度',
         paddingTop: '上边距',
@@ -197,6 +202,7 @@ class TableEditor {
         verticalAlign: 'vertical align',
         textAlign: 'text align',
         fontSize: 'font size',
+        lineHeight: 'line height',
         height: 'height',
         width: 'width',
         paddingTop: 'padding top',
@@ -211,7 +217,7 @@ class TableEditor {
     for (let i = 0; i < rows; i++) {
       let _tmp = '<tr>'
       for (let j = 0; j < columns; j++) {
-        _tmp += `<td style="width: ${conf.minWidth}px;height:${conf.minHeight}px"></td>`
+        _tmp += `<td style="padding:0;font-size:12px;line-height:14px;width: ${conf.minWidth}px;height:${conf.minHeight}px;"></td>`
       }
       _tmp += '</tr>'
       tableStr.push(_tmp)
@@ -227,6 +233,7 @@ class TableEditor {
   CreateFromString (str, appendTo) {
     appendTo.innerHTML = str
     this.initTable($('table', appendTo)[0])
+    this.setReadOnly()
   }
   CreateFromElem (elem) {
     this.pNode = elem.parentNode
@@ -238,16 +245,32 @@ class TableEditor {
     this.el.ondragstart = function () {
       return false
     }
-    this.el.setAttribute('contenteditable', true)
+    this.el.style.borderCollapse = 'collapse'
+    this.el.style.wordBreak = 'break-all'
+    // if (styleMap) {
+    //   Object.keys(styleMap).forEach(k => {
+    //     this.el.style[k] = styleMap[k]
+    //   })
+    // }
+    if (!this.readonly) this.el.setAttribute('contenteditable', true)
     this.bindEvents()
   }
-  GetTableStr (directly) {
+  setReadOnly () {
+    this.readonly = true
+    this.el.style.cursor = 'default'
+    this.el.setAttribute('contenteditable', false)
+  }
+  setWriteAble () {
+    this.readonly = false
+    this.el.setAttribute('contenteditable', true)
+  }
+  GetTableStr () {
     // if (directly) {
     //   return this.el.parentNode.innerHTML
     // } else {
     const elem = this.el.cloneNode(true)
     elem.style.cursor = 'default'
-    elem.setAttribute('contenteditable', false)
+    // elem.setAttribute('contenteditable', false)
     let div = d.createElement('div')
     div.appendChild(elem)
     setTimeout(() => {
@@ -259,7 +282,7 @@ class TableEditor {
   GetTable () {
     const elem = this.el.cloneNode(true)
     elem.style.cursor = 'default'
-    elem.setAttribute('contenteditable', false)
+    // elem.setAttribute('contenteditable', false)
     return elem
   }
   bindData (name, data) {
@@ -349,7 +372,7 @@ class TableEditor {
     }
   }
   upEvent (e) {
-    e.preventDefault()
+    // e.preventDefault()
     this.ms = 'up'
     this.actd = null
     this.el.style.cursor = 'default'
@@ -465,8 +488,8 @@ class TableEditor {
         })
       }
     } else {
-      if (getColSpan(td) !== getColSpan(this.actd)
-        || getRowSpan(td) !== getRowSpan(this.actd)) {
+      if (getColSpan(td) !== getColSpan(this.actd) ||
+        getRowSpan(td) !== getRowSpan(this.actd)) {
         console.warn('只有colspan和rowspan一样的单元格可以合并')
         return
       }
@@ -498,7 +521,14 @@ class TableEditor {
       banMenu = ['mergeCells', 'splitCell']
       if (getColSpan(e.target) > 1 || getRowSpan(e.target) > 1) {
         banMenu.splice(banMenu.findIndex(b => b === 'splitCell'), 1)
+        if (getColSpan(e.target) > 1) {
+          banMenu.push('deleteColumn')
+        }
+        if (getRowSpan(e.target) > 1) {
+          banMenu.push('deleteRow')
+        }
       }
+      console.log(banMenu)
       this.clearSelect()
       addClass(e.target, 'selected')
     }
@@ -524,12 +554,13 @@ class TableEditor {
       d.removeEventListener('mousedown', rm)
     }
     this.rm = rm
-    let tds = $('.selected', this.el)
+    // let tds = $('.selected', this.el)
     // if (!$('#new_context_menu')) {
     const div = d.createElement('div')
     div.id = 'new_context_menu'
     div.innerHTML = menuHtml
     div.style.left = e.x + 'px'
+    div.style.visibility = 'hidden'
     div.style.top = e.y + 'px'
     // div.style.left = getPageX(tds[0]) + tds[0].offsetWidth + 'px'
     // div.style.top = getPageY(tds[0]) + tds[0].offsetHeight + 'px'
@@ -537,6 +568,8 @@ class TableEditor {
       e.preventDefault()
     })
     d.body.appendChild(div)
+    checkIfOutOfScreen(div, e.y)
+    div.style.visibility = 'visible'
     this.bindMenuActions()
     // } 
     // else {
@@ -741,6 +774,7 @@ class TableEditor {
           const container = $('#new_context_menu')
           container.style.left = parseInt(container.style.left) + 30 + 'px'
           container.innerHTML = that.styleTemplate(tds)
+          checkIfOutOfScreen(container, parseInt(container.style.top))
           that.bindStyleEvents(tds)
         }
       }
