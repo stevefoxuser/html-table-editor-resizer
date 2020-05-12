@@ -4,7 +4,7 @@
 
 <img src="src/demo.gif">
 
-> Quick start  
+> 安装
 
 ### npm install  
 
@@ -12,9 +12,8 @@
 
 ### 查看 localhost:8080
 
-> 初始化 Initialize  
+> 
 ### 三种方式 初始化表格
-### Three ways to initialize your table
 ```javascript
 import TableEditor from "./tableEditor"
 // better to replace document.body with your own div container
