@@ -173,6 +173,7 @@ class TableEditor {
         mergeCells: '合并单元格',
         splitCell: '拆分单元格',
         cellStyle: '单元格样式'
+        // configData: '绑定数据'
       },
       en: {
         insertRowAfter: 'insert row after',
@@ -182,6 +183,7 @@ class TableEditor {
         mergeCells: 'merge cells',
         splitCell: 'split cell',
         cellStyle: 'edit cell style'
+        // configData: 'config data'
       }
     }[conf.language || 'cn']
 
@@ -233,7 +235,6 @@ class TableEditor {
   CreateFromString (str, appendTo) {
     appendTo.innerHTML = str
     this.initTable($('table', appendTo)[0])
-    this.setReadOnly()
   }
   CreateFromElem (elem) {
     this.pNode = elem.parentNode
@@ -285,9 +286,21 @@ class TableEditor {
     // elem.setAttribute('contenteditable', false)
     return elem
   }
-  bindData (name, data) {
-
-  }
+  /* 
+    set your own rule to require data
+    sample : dataSourceListStr = [{
+      name : "getBookList" ,
+      method : "GET",
+      source : "http://127.0.0.1",
+      params: "keyword,offset,pagesize"
+    }]
+  */
+  // bindData (dataSourceListStr) {
+  //   this.el.setAttribute('data-source', dataSourceListStr)
+  // }
+  // getDataSource () {
+  //   return this.el.getAttribute('data-source')
+  // }
   cellFilter (x, y) {
     const result = []
     if (typeof x !== 'function') {
@@ -516,7 +529,7 @@ class TableEditor {
     if (triggerBy === 'select') {
       let tds = $('.selected', this.el)
       if (!tds.length) return
-      banMenu = ['insertColumnAfter', 'deleteRow', 'deleteColumn', 'insertRowAfter', 'splitCell']
+      banMenu = ['configData', 'insertColumnAfter', 'deleteRow', 'deleteColumn', 'insertRowAfter', 'splitCell']
     } else {
       banMenu = ['mergeCells', 'splitCell']
       if (getColSpan(e.target) > 1 || getRowSpan(e.target) > 1) {
@@ -528,7 +541,6 @@ class TableEditor {
           banMenu.push('deleteRow')
         }
       }
-      console.log(banMenu)
       this.clearSelect()
       addClass(e.target, 'selected')
     }
@@ -771,16 +783,47 @@ class TableEditor {
         if (hasClass(this, 'disabled')) return
         const tds = $('.selected', that.el)
         if (tds.length) {
-          const container = $('#new_context_menu')
-          container.style.left = parseInt(container.style.left) + 30 + 'px'
-          container.innerHTML = that.styleTemplate(tds)
-          checkIfOutOfScreen(container, parseInt(container.style.top))
-          that.bindStyleEvents(tds)
+          that.getTemplate('styleTemplate', function () {
+            console.log(123)
+            that.bindStyleEvents(tds)
+          })
         }
       }
     }
+
+    // if ($('#configData')) {
+    //   $('#configData').onclick = function () {
+    //     if (hasClass(this, 'disabled')) return
+    //     const tds = $('.selected', that.el)
+    //     if (tds.length) {
+    //       that.getTemplate('configDataTemplate', function () {
+    //         that.bindStyleEvents(tds)
+    //       })
+    //     }
+    //   }
+    // }
   }
-  styleTemplate (tds) {
+
+  getTemplate (name, callback) {
+    const container = $('#new_context_menu')
+    container.style.left = parseInt(container.style.left) + 30 + 'px'
+    container.innerHTML = this[name]()
+    checkIfOutOfScreen(container, parseInt(container.style.top))
+    callback()
+  }
+
+  // configDataTemplate () {
+  //   const tds = $('.selected', this.el)
+  //   const last = tds[tds.length - 1]
+  //   let html = '<ul id="namespace_data_ul">'
+
+
+  //   html += '</ul>'
+  //   return html
+  // }
+
+  styleTemplate () {
+    const tds = $('.selected', this.el)
     const last = tds[tds.length - 1]
     let html = '<ul id="namespace_style_ul">'
     Object.keys(this.styleList).forEach(key => {
@@ -804,6 +847,7 @@ class TableEditor {
       html += `</li>`
     })
     // html += '<li><button class="namespace_save_style">保存样式</button></li></ul>'
+    html += '</ul>'
     return html
   }
   bindStyleEvents (tds) {
