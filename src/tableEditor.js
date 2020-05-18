@@ -500,6 +500,20 @@ class TableEditor {
           addClass(_td, 'selected')
         })
       }
+      // check colspan again
+      if (getTds.length) {
+        let cols = getColSpan(getTds[0]), rows = getRowSpan(getTds[0]), warn = false
+        getTds.forEach(_td => {
+          if (cols !== getColSpan(_td) || rows !== getRowSpan(_td)) {
+            return warn = true
+          }
+          addClass(_td, 'selected')
+        })
+        if (warn) {
+          getTds.forEach(_td => removeClass(_td, 'selected'))
+          console.warn('只有colspan和rowspan一样的单元格可以合并')
+        }
+      }
     } else {
       if (getColSpan(td) !== getColSpan(this.actd) ||
         getRowSpan(td) !== getRowSpan(this.actd)) {
