@@ -45,7 +45,7 @@ const removeClass = function (el, className) {
   let newClassName = el.className.replace(className, '')
   newClassName = newClassName.replace(/^\s+/, '').replace(/\s+$/, '')
   el.className = newClassName.split(/\s+/g).join(' ')
-  if (/\s+/.test(el.className) || !el.className) {
+  if (/^\s+$/.test(el.className) || !el.className) {
     el.removeAttribute('class')
   }
 }
