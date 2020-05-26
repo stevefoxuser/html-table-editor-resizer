@@ -38,7 +38,9 @@ const hasClass = function (el, className) {
 }
 const addClass = function (el, className) {
   if (hasClass(el, className)) return
-  el.className = el.className + ' ' + className
+  let _class = el.className + ' ' + className
+  _class = _class.replace(/^\s+/, '').replace(/\s+$/, '')
+  el.className = _class
 }
 const removeClass = function (el, className) {
   if (!el.className) return
@@ -62,9 +64,9 @@ const getIndex = function (el) {
 const insertAfter = function (newNode, existingNode) {
   const parent = existingNode.parentNode;
   if (parent.lastChild === existingNode) {
-    parent.appendChild(newNode);
+    parent.appendChild(newNode)
   } else {
-    parent.insertBefore(newNode, existingNode.nextSibling);
+    parent.insertBefore(newNode, existingNode.nextSibling)
   }
 }
 const checkIfOutOfScreen = function (popoverEl, top) {
@@ -93,6 +95,7 @@ class TableEditor {
     this.startX = null
     this.startWidth = null
     this.readonly = false
+    // this.freezeMove = false
 
     // 拖动光标生效范围必须比td最小宽度要小，否则会产生很多额外的逻辑判断当前拖动的是哪一个td，没有实用价值
     if (conf.cursorWidth >= conf.minWidth) conf.minWidth = conf.cursorWidth + 1
@@ -172,8 +175,9 @@ class TableEditor {
         deleteColumn: '删除列',
         mergeCells: '合并单元格',
         splitCell: '拆分单元格',
-        cellStyle: '单元格样式'
-        // configData: '绑定数据'
+        cellStyle: '单元格样式',
+        configData: '设定数据源',
+        bindData: '绑定数据'
       },
       en: {
         insertRowAfter: 'insert row after',
@@ -182,8 +186,9 @@ class TableEditor {
         deleteColumn: 'delete selected column',
         mergeCells: 'merge cells',
         splitCell: 'split cell',
-        cellStyle: 'edit cell style'
-        // configData: 'config data'
+        cellStyle: 'edit cell style',
+        configData: 'config data source',
+        bindData: 'bind data source'
       }
     }[conf.language || 'cn']
 
@@ -253,7 +258,7 @@ class TableEditor {
     //     this.el.style[k] = styleMap[k]
     //   })
     // }
-    if (!this.readonly) this.el.setAttribute('contenteditable', true)
+    // if (!this.readonly) this.el.setAttribute('contenteditable', true)
     this.bindEvents()
   }
   setReadOnly () {
@@ -267,7 +272,7 @@ class TableEditor {
   }
   GetTableStr () {
     // if (directly) {
-    //   return this.el.parentNode.innerHTML
+    return this.el.parentNode.innerHTML
     // } else {
     const elem = this.el.cloneNode(true)
     elem.style.cursor = 'default'
@@ -286,21 +291,12 @@ class TableEditor {
     // elem.setAttribute('contenteditable', false)
     return elem
   }
-  /* 
-    set your own rule to require data
-    sample : dataSourceListStr = [{
-      name : "getBookList" ,
-      method : "GET",
-      source : "http://127.0.0.1",
-      params: "keyword,offset,pagesize"
-    }]
-  */
-  // bindData (dataSourceListStr) {
-  //   this.el.setAttribute('data-source', dataSourceListStr)
-  // }
-  // getDataSource () {
-  //   return this.el.getAttribute('data-source')
-  // }
+  bindData (dataSourceListStr) {
+    this.el.setAttribute('data-source', dataSourceListStr)
+  }
+  getDataSource () {
+    return this.el.getAttribute('data-source')
+  }
   cellFilter (x, y) {
     const result = []
     if (typeof x !== 'function') {
@@ -329,18 +325,57 @@ class TableEditor {
   }
   bindEvents () {
     this.el.addEventListener('mousedown', (e) => {
+      // if (!this.freezeMove) return console.log('freeze')
       if (e.buttons === 1) {
         this.downEvent(e)
       }
     })
     d.addEventListener('mouseup', (e) => {
+      // this.freezeMove = true
+      // setTimeout(() => {
+      //   this.freezeMove = false
+      // }, 300)
       this.upEvent(e)
     })
     d.addEventListener('mousemove', (e) => {
+      // if (!this.freezeMove) return console.log('freeze')
       this.moveEvent(e)
     })
     this.el.addEventListener('contextmenu', (e) => {
       this.newContextMenu(e)
+    })
+    this.el.addEventListener('dblclick', (e) => {
+      this.dbclickEvents(e)
+    })
+  }
+  dbclickEvents (e) {
+    let td
+    let oldtxt
+    let textarea
+    if (e.target.tagName === 'TD') {
+      td = e.target
+      textarea = td.querySelector('textarea') || d.createElement('textarea')
+      oldtxt = td.innerText
+    } else if (e.target.tagName === 'textarea') {
+      td = e.target.parentNode
+      textarea = e.target
+      oldtxt = textarea.value
+    } else {
+      return
+    }
+    textarea.style.height = td.offsetHeight - 1 + 'px'
+    textarea.style.width = '100%'
+    textarea.style.overflow = 'hidden'
+    textarea.innerText = oldtxt
+    textarea.style.background = '#fff'
+    textarea.style.resize = 'none'
+    textarea.style.border = 'none'
+    textarea.style.display = 'block'
+    td.innerHTML = ''
+    td.appendChild(textarea)
+    textarea.select()
+    textarea.addEventListener('blur', () => {
+      td.innerText = textarea.value
     })
   }
   downEvent (e) {
@@ -485,20 +520,18 @@ class TableEditor {
     const td = e.target
     if (td === this.actd) return
     if (!isParent(td, this.el)) return
+    if (!this.actd) return
     let sx = this.actd.offsetLeft, sy = this.actd.offsetTop
     let cx = td.offsetLeft, cy = td.offsetTop
     if (this.selectDirection) {
       $('td', this.el).forEach(_td => {
         removeClass(_td, 'selected')
       })
+      let getTds = []
       if (this.selectDirection === 'y' && sx === cx) {
-        this.cellFilter(sx, [sy, cy]).forEach(_td => {
-          addClass(_td, 'selected')
-        })
+        getTds = this.cellFilter(sx, [sy, cy])
       } else if (this.selectDirection === 'x' && sy === cy) {
-        this.cellFilter([sx, cx], sy).forEach(_td => {
-          addClass(_td, 'selected')
-        })
+        getTds = this.cellFilter([sx, cx], sy)
       }
       // check colspan again
       if (getTds.length) {
@@ -543,20 +576,27 @@ class TableEditor {
     if (triggerBy === 'select') {
       let tds = $('.selected', this.el)
       if (!tds.length) return
-      banMenu = ['configData', 'insertColumnAfter', 'deleteRow', 'deleteColumn', 'insertRowAfter', 'splitCell']
+      banMenu = ['bindData', 'configData', 'insertColumnAfter', 'deleteRow', 'deleteColumn', 'insertRowAfter', 'splitCell']
     } else {
+      var td
+      if (e.target.tagName !== 'TD') {
+        td = e.target.parentNode
+        e.target.blur()
+      } else {
+        td = e.target
+      }
       banMenu = ['mergeCells', 'splitCell']
-      if (getColSpan(e.target) > 1 || getRowSpan(e.target) > 1) {
+      if (getColSpan(td) > 1 || getRowSpan(td) > 1) {
         banMenu.splice(banMenu.findIndex(b => b === 'splitCell'), 1)
-        if (getColSpan(e.target) > 1) {
+        if (getColSpan(td) > 1) {
           banMenu.push('deleteColumn')
         }
-        if (getRowSpan(e.target) > 1) {
+        if (getRowSpan(td) > 1) {
           banMenu.push('deleteRow')
         }
       }
       this.clearSelect()
-      addClass(e.target, 'selected')
+      addClass(td, 'selected')
     }
     // 弹出菜单
     let tpl = (() => {
@@ -798,24 +838,43 @@ class TableEditor {
         const tds = $('.selected', that.el)
         if (tds.length) {
           that.getTemplate('styleTemplate', function () {
-            console.log(123)
             that.bindStyleEvents(tds)
           })
         }
       }
     }
 
-    // if ($('#configData')) {
-    //   $('#configData').onclick = function () {
-    //     if (hasClass(this, 'disabled')) return
-    //     const tds = $('.selected', that.el)
-    //     if (tds.length) {
-    //       that.getTemplate('configDataTemplate', function () {
-    //         that.bindStyleEvents(tds)
-    //       })
-    //     }
-    //   }
-    // }
+    if ($('#configData')) {
+      $('#configData').onclick = function (e) {
+        if (hasClass(this, 'disabled')) return
+        const tds = $('.selected', that.el)
+        if (tds.length) {
+          if (that.configData) {
+            that.configData()
+            that.rm(e, 'force')
+          } else {
+            console.error('Please register TableEditor.configData first.')
+            alert('请先定义configData方法')
+          }
+        }
+      }
+    }
+
+    if ($('#bindData')) {
+      $('#bindData').onclick = function (e) {
+        if (hasClass(this, 'disabled')) return
+        const tds = $('.selected', that.el)
+        if (tds.length) {
+          if (that.bindData) {
+            that.bindData(tds)
+            that.rm(e, 'force')
+          } else {
+            console.error('Please register TableEditor.bindData first.')
+            alert('请先定义bindData方法')
+          }
+        }
+      }
+    }
   }
 
   getTemplate (name, callback) {
