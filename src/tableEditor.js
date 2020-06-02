@@ -1,6 +1,6 @@
 // config
 const conf = {
-  language: 'cn', // cn en
+  language: 'cn',
   cursorWidth: 3,
   minWidth: 20,
   minHeight: 20
@@ -141,7 +141,10 @@ class TableEditor {
         }
         .namespace_table_editor td{
           vertical-align:top;
-          padding:0;
+          padding:2px 2px 2px 2px;
+          text-align:center;
+          vertical-align:middle;
+          font-size:12px;
         }
         .namespace_table_editor .selected{
           background:#ccc;
@@ -170,7 +173,7 @@ class TableEditor {
     this.menuList = {
       cn: {
         insertRowAfter: '在下方插入行',
-        insertColumnAfter: '在右方插入列',
+        insertColumnAfter: '在末尾插入列',
         deleteRow: '删除行',
         deleteColumn: '删除列',
         mergeCells: '合并单元格',
@@ -224,7 +227,7 @@ class TableEditor {
     for (let i = 0; i < rows; i++) {
       let _tmp = '<tr>'
       for (let j = 0; j < columns; j++) {
-        _tmp += `<td style="padding:0;font-size:12px;line-height:14px;width: ${conf.minWidth}px;height:${conf.minHeight}px;"></td>`
+        _tmp += `<td style="text-align:center;font-size:12px;line-height:14px;width: ${conf.minWidth}px;height:${conf.minHeight}px;"></td>`
       }
       _tmp += '</tr>'
       tableStr.push(_tmp)
@@ -657,20 +660,27 @@ class TableEditor {
   splitCellFunc (td) {
     const rowspan = getRowSpan(td)
     const colspan = getColSpan(td)
-    if (rowspan <= 1 && colspan <= 1) {
-      return
-    }
-    const tr = td.parentNode
-    const index = getIndex(tr)
-    const trs = $('tr', this.el)
-    for (let i = index; i < index + rowspan; i++) {
-      for (let j = 0; j < colspan; j++) {
-        if (i === index && j === 0) continue
-        trs[i].appendChild(document.createElement('td'))
+    // if (rowspan <= 1 && colspan <= 1) {
+    //   return
+    // }
+    if (colspan > 1) {
+      for (let i = 1; i < colspan; i++) {
+        let _td = document.createElement('td')
+        _td.setAttribute('rowspan', rowspan)
+        insertAfter(_td, td)
+      }
+      td.setAttribute('colspan', 1)
+    } else {
+      if (rowspan > 1) {
+        const tr = td.parentNode
+        const index = getIndex(tr)
+        const trs = $('tr', this.el)
+        for (let i = index + 1; i < index + rowspan; i++) {
+          trs[i].appendChild(document.createElement('td'))
+        }
+        td.setAttribute('rowspan', 1)
       }
     }
-    td.setAttribute('colspan', 1)
-    td.setAttribute('rowspan', 1)
   }
   bindMenuActions () {
     const that = this
@@ -679,16 +689,18 @@ class TableEditor {
         if (hasClass(this, 'disabled')) return
         const tds = $('.selected', that.el)
         if (tds.length) {
-          const last = tds[tds.length - 1]
-          const index = getIndex(last)
+          // const last = tds[tds.length - 1]
           $('tr', that.el).forEach(v => {
-            $('td', v).forEach((_td, k) => {
-              if (k === index) {
-                const newtd = d.createElement('td')
-                newtd.style.width = conf.minWidth + 'px'
-                insertAfter(newtd, _td)
-              }
-            })
+            const newtd = d.createElement('td')
+            newtd.style.width = conf.minWidth + 'px'
+            v.appendChild(newtd)
+            // $('td', v).forEach((_td, k) => {
+            //   if (last.offsetLeft === _td.offsetLeft) {
+            //     const newtd = d.createElement('td')
+            //     newtd.style.width = conf.minWidth + 'px'
+            //     insertAfter(newtd, _td)
+            //   }
+            // })
           })
         }
       }
@@ -705,7 +717,7 @@ class TableEditor {
             let count = 0
             const _tds = $('td', tr)
             _tds.forEach(_td => {
-              count += _td.getAttribute('colspan') ? parseInt(_td.getAttribute('colspan')) : 1
+              count += getColSpan(_td)
             })
             max = count > max ? count : max
           })
@@ -739,7 +751,6 @@ class TableEditor {
           while (tr.previousSibling) {
             const _curIndex = getIndex(tr.previousSibling)
             $('td', tr.previousSibling).forEach(td => {
-              // index - _curIndex等于两个tr之间的距离，rowspan大于距离则删除列以后需要缩小rowspan
               if (getRowSpan(td) > index - _curIndex) bigTds.push(td)
             })
             tr = tr.previousSibling
@@ -759,25 +770,35 @@ class TableEditor {
         const tds = $('.selected', that.el)
         if (tds.length) {
           const last = tds[tds.length - 1]
-          const index = getIndex(last)
           const trs = $('tr', this.el)
           trs.forEach(tr => {
-            $('td', tr).forEach((td, k) => {
-              if (k === index) {
+            $('td', tr).forEach(td => {
+              if (last.offsetLeft === td.offestLeft) {
                 that.splitCellFunc(td)
               }
             })
           })
           const bigTds = []
+          const distance = (() => {
+            let _td = last
+            let _dis = getColSpan(last)
+            while (_td.previousSibling) {
+              _td = _td.previousSibling
+              _dis += getColSpan(_td)
+            }
+            return _dis
+          })()
           trs.forEach(tr => {
-            let needDelete = true
+            let curDis = 0, outloop = false
             $('td', tr).forEach((td, k) => {
-              // index-k等于两个td间的距离，colspan大于距离则删除列以后需要缩小colspan
-              if (k < index && getColSpan(td) > index - k) {
-                bigTds.push(td)
-                needDelete = false
-              } else if (needDelete && k === index) {
-                td.parentNode.removeChild(td)
+              curDis += getColSpan(td)
+              if (curDis >= distance && !outloop) {
+                if (getColSpan(td) > 1) {
+                  bigTds.push(td)
+                } else {
+                  td.parentNode.removeChild(td)
+                }
+                outloop = true
               }
             })
           })
@@ -904,12 +925,14 @@ class TableEditor {
       <div class="namespace_right_div">`
       if (key === 'textAlign') {
         html += `<select id="namespace_${key}">
+          <option value="">未选择</option>
           <option ${last.style[key] === 'left' ? 'selected' : ''} value="left">左对齐</option>
           <option ${last.style[key] === 'center' ? 'selected' : ''} value="center">居中</option>
           <option ${last.style[key] === 'right' ? 'selected' : ''} value="right">右对齐</option>
         </select>`
       } else if (key === 'verticalAlign') {
         html += `<select id="namespace_${key}">
+          <option value="">未选择</option>
           <option ${last.style[key] === 'top' ? 'selected' : ''} value="top">顶部对齐</option>
           <option ${last.style[key] === 'middle' ? 'selected' : ''} value="middle">居中</option>
           <option ${last.style[key] === 'bottom' ? 'selected' : ''} value="bottom">底部对齐</option>
