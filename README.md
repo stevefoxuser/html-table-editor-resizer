@@ -36,7 +36,4 @@ console.log(t.GetTable())
 console.log(t.GetTableStr())
 ```
 
-### to do
-### 增加绑定服务端数据源的功能  
-### 增加更多浏览器适配  
-### 需要在ES5环境下运行的话需要自己babel转一下，目前在完善功能，最后会加上ES5版本。  
+卧槽，放了这么久了，真就一个屎大都没有啊
