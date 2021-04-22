@@ -179,8 +179,6 @@ class TableEditor {
         mergeCells: '合并单元格',
         splitCell: '拆分单元格',
         cellStyle: '单元格样式',
-        configData: '设定数据源',
-        bindData: '绑定数据'
       },
       en: {
         insertRowAfter: 'insert row after',
@@ -190,8 +188,6 @@ class TableEditor {
         mergeCells: 'merge cells',
         splitCell: 'split cell',
         cellStyle: 'edit cell style',
-        configData: 'config data source',
-        bindData: 'bind data source'
       }
     }[conf.language || 'cn']
 
@@ -579,7 +575,7 @@ class TableEditor {
     if (triggerBy === 'select') {
       let tds = $('.selected', this.el)
       if (!tds.length) return
-      banMenu = ['bindData', 'configData', 'insertColumnAfter', 'deleteRow', 'deleteColumn', 'insertRowAfter', 'splitCell']
+      banMenu = ['insertColumnAfter', 'deleteRow', 'deleteColumn', 'insertRowAfter', 'splitCell']
     } else {
       var td
       if (e.target.tagName !== 'TD') {
@@ -617,22 +613,17 @@ class TableEditor {
         return
       }
       this.clearSelect()
-      // $('#new_context_menu').style.display = 'none'
       $('#new_context_menu').parentNode.removeChild($('#new_context_menu'))
       this.menuState = 'hidden'
       d.removeEventListener('mousedown', rm)
     }
     this.rm = rm
-    // let tds = $('.selected', this.el)
-    // if (!$('#new_context_menu')) {
     const div = d.createElement('div')
     div.id = 'new_context_menu'
     div.innerHTML = menuHtml
     div.style.left = e.x + 'px'
     div.style.visibility = 'hidden'
     div.style.top = e.y + 'px'
-    // div.style.left = getPageX(tds[0]) + tds[0].offsetWidth + 'px'
-    // div.style.top = getPageY(tds[0]) + tds[0].offsetHeight + 'px'
     div.addEventListener('contextmenu', (e) => {
       e.preventDefault()
     })
@@ -640,29 +631,12 @@ class TableEditor {
     checkIfOutOfScreen(div, e.y)
     div.style.visibility = 'visible'
     this.bindMenuActions()
-    // } 
-    // else {
-    //   const div = $('#new_context_menu')
-    //   div.style.left = e.x + 'px'
-    //   div.style.top = e.y + 'px'
-    //   div.style.display = "block"
-    // }
     d.addEventListener('mousedown', rm)
     this.menuState = 'shown'
-    // 设置菜单是否可以操作
-    // $('li', $('#new_context_menu')).forEach(li => {
-    //   removeClass(li, 'disabled')
-    //   if (banMenu.includes(li.id)) {
-    //     addClass(li, 'disabled')
-    //   }
-    // })
   }
   splitCellFunc (td) {
     const rowspan = getRowSpan(td)
     const colspan = getColSpan(td)
-    // if (rowspan <= 1 && colspan <= 1) {
-    //   return
-    // }
     if (colspan > 1) {
       for (let i = 1; i < colspan; i++) {
         let _td = document.createElement('td')
@@ -864,38 +838,6 @@ class TableEditor {
         }
       }
     }
-
-    if ($('#configData')) {
-      $('#configData').onclick = function (e) {
-        if (hasClass(this, 'disabled')) return
-        const tds = $('.selected', that.el)
-        if (tds.length) {
-          if (that.configData) {
-            that.configData()
-            that.rm(e, 'force')
-          } else {
-            console.error('Please register TableEditor.configData first.')
-            alert('请先定义configData方法')
-          }
-        }
-      }
-    }
-
-    if ($('#bindData')) {
-      $('#bindData').onclick = function (e) {
-        if (hasClass(this, 'disabled')) return
-        const tds = $('.selected', that.el)
-        if (tds.length) {
-          if (that.bindData) {
-            that.bindData(tds)
-            that.rm(e, 'force')
-          } else {
-            console.error('Please register TableEditor.bindData first.')
-            alert('请先定义bindData方法')
-          }
-        }
-      }
-    }
   }
 
   getTemplate (name, callback) {
@@ -905,16 +847,6 @@ class TableEditor {
     checkIfOutOfScreen(container, parseInt(container.style.top))
     callback()
   }
-
-  // configDataTemplate () {
-  //   const tds = $('.selected', this.el)
-  //   const last = tds[tds.length - 1]
-  //   let html = '<ul id="namespace_data_ul">'
-
-
-  //   html += '</ul>'
-  //   return html
-  // }
 
   styleTemplate () {
     const tds = $('.selected', this.el)
